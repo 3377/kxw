@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日资讯</title>
+    <style>
+        /* 全局 box-sizing */
+        * {
+            box-sizing: border-box;
+        }
+
+        /* 基本样式 */
+        body {
+            font-family: "Arial", sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            color: #333;
+            display: flex; /* 使 body 成为 flex 容器 */
+            justify-content: center; /* 水平居中 */
+            align-items: center; /* 垂直居中 */
+            min-height: 100vh; /* 占据整个屏幕高度 */
+        }
+
+        .container {
+            width: 90%;
+            max-width: 800px;
+            background-color: white;
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            padding: 30px;
+            display: none; /* 初始隐藏，数据加载后显示 */
+        }
+
+        h1 {
+            font-size: 1.8em;
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .date {
+            text-align: center;
+            font-size: 1.2em;
+            color: #555;
+            margin-bottom: 10px;
+            position: sticky;
+            top: 0;
+            background-color: white;
+            z-index: 1;
+            padding: 10px 0;
+        }
+
+        .news-section {
+            line-height: 1.8;
+            font-size: 1.1em;
+            color: #444;
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .news-item {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .news-item-number {
+            font-weight: bold;
+            margin-right: 10px;
+            color: #ff5722;
+        }
+
+        .quote {
+            font-style: italic;
+            text-align: center;
+            margin-top: 20px;
+            color: #777;
+        }
+
+        /* 加载动画样式 */
+        .loading {
+            display: flex; /* 使用 flex 布局 */
+            flex-direction: column; /* 垂直排列 */
+            justify-content: center; /* 垂直居中 */
+            align-items: center; /* 水平居中 */
+            text-align: center; /* 文字水平居中 */
+        }
+
+        /* 点的圆形轨迹 */
+        .circle-container {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0; /* 确保没有额外的 padding */
+            margin: 0; /* 确保没有额外的 margin */
+        }
+
+        /* 旋转的点 */
+        .dot {
+            width: 15px;
+            height: 15px;
+            background-color: #ff5722;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform-origin: center; /* 保持中心作为旋转轴 */
+            opacity: 0;
+            animation: rotate 2s linear infinite, fade 2s linear infinite;
+            transform: translate(-50%, -50%); /* 确保点的中心对齐 */
+        }
+
+        /* 动画：点沿着圆的轨迹旋转 */
+        @keyframes rotate {
+            0% {
+                transform: translate(-50%, -50%) rotate(0deg) translateY(-60px);
+            }
+
+            100% {
+                transform: translate(-50%, -50%) rotate(360deg) translateY(-60px);
+            }
+        }
+
+        /* 动画：点逐渐显示和消失 */
+        @keyframes fade {
+            0%,
+            100% {
+                opacity: 0;
+            }
+
+            20%,
+            80% {
+                opacity: 1;
+            }
+        }
+
+        /* 动画：文字淡入淡出 */
+        @keyframes textFade {
+            0% {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            50% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            100% {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+        }
+
+        /* 获取最新新闻提示 */
+        .loading-text {
+            margin-top: 20px;
+            font-size: 1.2em;
+            color: #555;
+            text-align: center; /* 使文字水平居中 */
+            opacity: 0; /* 初始透明度为0 */
+            animation: textFade 3s infinite; /* 应用动画，持续3秒，循环无限次 */
+        }
+
+        /* 手机端适配 */
+        @media screen and (max-width: 600px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.5em;
+            }
+
+            .news-section {
+                font-size: 0.9em;
+                line-height: 1.6;
+            }
+
+            .news-item-number {
+                font-size: 0.9em;
+            }
+        }
+
+        /* 平板适配 */
+        @media screen and (min-width: 601px) and (max-width: 1024px) {
+            .container {
+                width: 85%;
+                max-width: 700px;
+            }
+
+            h1 {
+                font-size: 1.6em;
+            }
+
+            .news-section {
+                font-size: 1em;
+                line-height: 1.7;
+            }
+        }
+
+        /* 桌面端适配 */
+        @media screen and (min-width: 1025px) {
+            .container {
+                width: 75%;
+            }
+
+            h1 {
+                font-size: 1.9em;
+            }
+
+            .news-section {
+                font-size: 1.2em;
+                line-height: 1.8;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- 加载动画 -->
+    <div class="loading" id="loading">
+        <div class="circle-container" id="circle-container">
+            <!-- 这里将动态插入 8 个点 -->
+        </div>
+        <div class="loading-text" id="loading-text">获取最新新闻中~</div>
+    </div>
+
+    <!-- 内容容器 -->
+    <div class="container" id="container">
+        <h1>每日资讯</h1>
+        <div class="date" id="date">
+            <!-- 日期将通过 JavaScript 动态加载 -->
+        </div>
+        <ul class="news-section" id="news-section">
+            <!-- 新闻内容将通过 JavaScript 动态加载 -->
+        </ul>
+        <div class="quote" id="quote">
+            <!-- 微语内容将通过 JavaScript 动态加载 -->
+        </div>
+    </div>
+
+    <script>
+        // 函数用于生成随机颜色
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+        // 创建 8 个点并围绕一个圆进行旋转
+        const circleContainer = document.getElementById('circle-container');
+        const totalDots = 8;
+        let dots = [];
+
+        for (let i = 0; i < totalDots; i++) {
+            const dot = document.createElement('div');
+            dot.className = 'dot';
+            dot.style.backgroundColor = getRandomColor(); // 为每个点生成随机颜色
+
+            // 修改 transform 属性，确保 translate(-50%, -50%) 在旋转之前
+            dot.style.transform = `translate(-50%, -50%) rotate(${(360 / totalDots) * i}deg) translateY(-60px)`;
+
+            dot.style.animationDelay = `${i * 0.25}s`; // 依次延迟动画
+            dots.push(dot);
+            circleContainer.appendChild(dot);
+        }
+
+        // 模拟加载延迟，显示加载动画
+        const loadingElement = document.getElementById('loading');
+        const containerElement = document.getElementById('container');
+
+        // 调用 API 获取新闻数据
+        fetch('https://api.lbbb.cc/api/60miao')
+            .then(response => response.text()) // 获取纯文本数据
+            .then(data => {
+                // 隐藏加载动画，显示内容
+                loadingElement.style.display = 'none';
+                containerElement.style.display = 'block';
+
+                // 将响应数据按行分割
+                const lines = data.trim().split('\n');
+
+                // 提取日期信息
+                const dateLine = lines[0].trim();
+                const dateSection = document.getElementById('date');
+                dateSection.textContent = dateLine;
+
+                // 移除第一行（日期）和第二行（介绍性文字）
+                const newsItems = lines.slice(2, lines.length - 1);
+
+                // 获取新闻区域和微语区域的DOM元素
+                const newsSection = document.getElementById('news-section');
+                const quoteSection = document.getElementById('quote');
+
+                // 处理新闻条目，按行解析并添加数字编号
+                newsItems.forEach((item, index) => {
+                    const newsItemElement = document.createElement('li');
+                    newsItemElement.className = 'news-item';
+
+                    // 创建编号元素
+                    const numberElement = document.createElement('span');
+                    numberElement.className = 'news-item-number';
+                    numberElement.textContent = `${index + 1}、`;
+
+                    // 使用正则表达式移除开头的编号（假设编号格式为：数字 + '、'）
+                    const cleanedItem = item.replace(/^\d+、\s*/, '');
+
+                    // 创建新闻内容元素
+                    const contentElement = document.createElement('span');
+                    contentElement.textContent = cleanedItem.trim();
+
+                    // 将编号和内容添加到新闻条目中
+                    newsItemElement.appendChild(numberElement);
+                    newsItemElement.appendChild(contentElement);
+                    newsSection.appendChild(newsItemElement);
+                });
+
+                // 提取最后一行的微语
+                const quote = lines[lines.length - 1].replace('【微语】', '').trim();
+                quoteSection.textContent = quote;
+            })
+            .catch(error => {
+                console.error('获取数据时出错:', error);
+                document.getElementById('news-section').textContent = '新闻加载失败，请稍后重试。';
+            });
+    </script>
+
+</body>
+
+</html>
